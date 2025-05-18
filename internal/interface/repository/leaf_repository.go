@@ -7,11 +7,13 @@ import (
 )
 
 type ListOptions struct {
-	Platform string
-	Tags     []string
-	ReadOnly bool
-	Limit    int
-	Offset   int
+	Platforms []string
+	Tags      []string
+	ReadOnly  bool
+	Limit     int
+	Offset    int
+	SortBy    string
+	SortDesc  bool
 }
 
 type LeafRepository interface {
