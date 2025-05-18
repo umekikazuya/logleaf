@@ -18,7 +18,6 @@ type Leaf struct {
 // NewLeaf creates a new Leaf instance.
 func NewLeaf(
 	id, title string, url string, platform string,
-	publishedAt time.Time,
 ) *Leaf {
 	return &Leaf{
 		ID:       id,
@@ -38,5 +37,7 @@ func (l *Leaf) MarkAsRead() {
 
 // UpdateTags replaces the tags.
 func (l *Leaf) UpdateTags(tags []string) {
-	l.Tags = tags
+	newTags := make([]string, len(tags))
+	copy(newTags, tags)
+	l.Tags = newTags
 }
