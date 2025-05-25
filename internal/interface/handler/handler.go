@@ -29,22 +29,16 @@ func (h *LeafHandler) ListLeaves(c *gin.Context) {
 
 // GET /api/leaves/:id
 func (h *LeafHandler) GetLeaf(c *gin.Context) {
-	id := c.Param("id")
-	if id == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "leaf ID is required"})
-		return
-	}
-
-	leaf, err := h.Usecase.GetLeaf(c.Request.Context(), id)
+	leaf, err := h.Usecase.GetLeaf(c.Request.Context(), c.Param("id"))
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to fetch leaf"})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 	if leaf == nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "leaf not found"})
 		return
 	}
-	c.JSON(http.StatusOK, leaf)
+	c.JSON(http.StatusOK, application.LeafDomainToOutputDTO(leaf))
 }
 
 // POST /api/leaves

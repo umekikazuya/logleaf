@@ -1,6 +1,10 @@
 package application
 
-import "github.com/umekikazuya/logleaf/internal/domain"
+import (
+	"time"
+
+	"github.com/umekikazuya/logleaf/internal/domain"
+)
 
 type LeafInputDTO struct {
 	ID       string
@@ -16,6 +20,7 @@ type LeafOutputDTO struct {
 	URL      string
 	Platform string
 	Tags     []string
+	SyncedAt string
 }
 
 func LeafInputDTOToDomain(dto *LeafInputDTO) *domain.Leaf {
@@ -35,5 +40,6 @@ func LeafDomainToOutputDTO(leaf *domain.Leaf) *LeafOutputDTO {
 		URL:      leaf.URL,
 		Platform: leaf.Platform,
 		Tags:     leaf.Tags,
+		SyncedAt: leaf.SyncedAt.Format(time.RFC3339),
 	}
 }

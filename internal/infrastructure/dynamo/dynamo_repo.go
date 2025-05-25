@@ -36,7 +36,7 @@ func (r *LeafDynamoRepository) Get(ctx context.Context, id string) (*domain.Leaf
 		return nil, err
 	}
 	if output.Item == nil {
-		return nil, nil
+		return nil, errors.New("leaf not found")
 	}
 	var leaf domain.Leaf
 	if err := attributevalue.UnmarshalMap(output.Item, &leaf); err != nil {
