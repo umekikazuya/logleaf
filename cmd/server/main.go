@@ -4,7 +4,6 @@ import (
 	"context"
 	"os"
 
-	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
 	"github.com/gin-gonic/gin"
@@ -17,7 +16,13 @@ import (
 func main() {
 	r := gin.Default()
 
-	godotenv.Load()
+	// .envファイルの読み込み
+	err := godotenv.Load()
+	if err != nil {
+		panic("Error loading .env file")
+	}
+
+	// DynamoDBの設定
 	endpoint := os.Getenv("DYNAMO_ENDPOINT")
 	region := os.Getenv("AWS_REGION")
 	if region == "" {
@@ -25,24 +30,20 @@ func main() {
 	}
 	cfg, err := config.LoadDefaultConfig(context.Background(),
 		config.WithRegion(region),
-		config.WithEndpointResolver(
-			aws.EndpointResolverFunc(func(service, region string) (aws.Endpoint, error) {
-				if endpoint != "" && service == dynamodb.ServiceID {
-					return aws.Endpoint{
-						URL:           endpoint,
-						SigningRegion: region,
-					}, nil
-				}
-				return aws.Endpoint{}, &aws.EndpointNotFoundError{}
-			}),
-		),
 	)
-	if err != nil {
-		panic("failed to load AWS config: " + err.Error())
-	}
-	client := dynamodb.NewFromConfig(cfg)
+	client := dynamodb.NewFromConfig(cfg, func(o *dynamodb.Options) {
+		if endpoint != "" {
+			o.BaseEndpoint = &endpoint
+		}
+	})
 
-	leafRepo := dynamo.NewLeafDynamoRepository(client, os.Getenv("DYNAMO_TABLE"))
+	// DynamoDBのテーブル名を環境変数から取得
+	tableName := os.Getenv("DYNAMO_TABLE")
+	if tableName == "" {
+		panic("DYNAMO_TABLE environment variable is required")
+	}
+
+	leafRepo := dynamo.NewLeafDynamoRepository(client, tableName)
 	leafUsecase := usecase.NewLeafUsecase(leafRepo)
 	leafHandler := handler.NewLeafHandler(leafUsecase)
 	api := r.Group("/api")
@@ -59,5 +60,7 @@ func main() {
 	if port == "" {
 		port = "8080"
 	}
-	r.Run(":" + port)
+	if err := r.Run(":" + port); err != nil {
+		panic("failed to start server: " + err.Error())
+	}
 }
