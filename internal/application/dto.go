@@ -24,13 +24,11 @@ type LeafOutputDTO struct {
 }
 
 func LeafInputDTOToDomain(dto *LeafInputDTO) *domain.Leaf {
-	return &domain.Leaf{
-		ID:       dto.ID,
-		Title:    dto.Title,
-		URL:      dto.URL,
-		Platform: dto.Platform,
-		Tags:     dto.Tags,
+	leaf := domain.NewLeaf(dto.ID, dto.Title, dto.URL, dto.Platform)
+	if dto.Tags != nil {
+		leaf.UpdateTags(dto.Tags)
 	}
+	return leaf
 }
 
 func LeafDomainToOutputDTO(leaf *domain.Leaf) *LeafOutputDTO {

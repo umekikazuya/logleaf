@@ -17,7 +17,7 @@ type Leaf struct {
 
 // NewLeaf creates a new Leaf instance.
 func NewLeaf(
-	id, title string, url string, platform string,
+	id string, title string, url string, platform string
 ) *Leaf {
 	return &Leaf{
 		ID:       id,

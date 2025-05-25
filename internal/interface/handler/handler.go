@@ -18,13 +18,21 @@ func NewLeafHandler(u *application.LeafUsecase) *LeafHandler {
 
 // Index /api/leaves
 func (h *LeafHandler) ListLeaves(c *gin.Context) {
-	opts := domain.ListOptions{}
+	// Parse query parameters for filtering options
+	opts := domain.ListOptions{
+		Limit: 100, // default limit
+	}
 	leaves, err := h.Usecase.ListLeaves(c.Request.Context(), opts)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to fetch leaves"})
 		return
 	}
-	c.JSON(http.StatusOK, leaves)
+	// Convert to output DTOs
+	outputDTOs := make([]*application.LeafOutputDTO, len(leaves))
+	for i, leaf := range leaves {
+		outputDTOs[i] = application.LeafDomainToOutputDTO(&leaf)
+	}
+	c.JSON(http.StatusOK, outputDTOs)
 }
 
 // GET /api/leaves/:id
