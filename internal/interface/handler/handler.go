@@ -1,20 +1,18 @@
 package handler
 
 import (
-	"fmt"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
-	"github.com/google/uuid"
+	"github.com/umekikazuya/logleaf/internal/application"
 	"github.com/umekikazuya/logleaf/internal/domain"
-	"github.com/umekikazuya/logleaf/internal/usecase"
 )
 
 type LeafHandler struct {
-	Usecase *usecase.LeafUsecase
+	Usecase *application.LeafUsecase
 }
 
-func NewLeafHandler(u *usecase.LeafUsecase) *LeafHandler {
+func NewLeafHandler(u *application.LeafUsecase) *LeafHandler {
 	return &LeafHandler{Usecase: u}
 }
 
@@ -51,33 +49,27 @@ func (h *LeafHandler) GetLeaf(c *gin.Context) {
 
 // POST /api/leaves
 func (h *LeafHandler) AddLeaf(c *gin.Context) {
-	input := struct {
-		ID       string `json:"id"`
-		Title    string `json:"title" binding:"required"`
-		URL      string `json:"url" binding:"required"`
-		Platform string `json:"platform" binding:"required"`
-	}{}
-	if err := c.ShouldBindJSON(&input); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid body"})
+	// Request
+	var req CreateLeafRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request body"})
 		return
 	}
-	var leafID string = input.ID
-	if input.ID == "" {
-		leafID = fmt.Sprintf("leaf-%s", uuid.New().String())
+	// Convert to DTO
+	inputDto := application.LeafInputDTO{
+		Title:    req.Title,
+		URL:      req.URL,
+		Platform: req.Platform,
+		Tags:     req.Tags,
 	}
-	l := domain.NewLeaf(
-		leafID,
-		input.Title,
-		input.URL,
-		input.Platform,
-	)
-
-	app_err := h.Usecase.AddLeaf(c.Request.Context(), l)
-	if app_err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to add leaf"})
+	// Add Leaf
+	leaf, err := h.Usecase.AddLeaf(c.Request.Context(), &inputDto)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
-	c.JSON(http.StatusCreated, l)
+	// Response
+	c.JSON(http.StatusCreated, application.LeafDomainToOutputDTO(leaf))
 }
 
 // PATCH /api/leaves/:id
@@ -91,7 +83,7 @@ func (h *LeafHandler) UpdateLeaf(c *gin.Context) {
 	}
 
 	if err := h.Usecase.UpdateLeaf(c.Request.Context(), id, &input); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "update failed"})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{"message": "updated"})
@@ -101,8 +93,8 @@ func (h *LeafHandler) UpdateLeaf(c *gin.Context) {
 func (h *LeafHandler) DeleteLeaf(c *gin.Context) {
 	id := c.Param("id")
 	if err := h.Usecase.DeleteLeaf(c.Request.Context(), id); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "delete failed"})
+		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
 		return
 	}
-	c.JSON(http.StatusOK, gin.H{"message": "deleted"})
+	c.JSON(http.StatusOK, gin.H{"message": "Successfully deleted"})
 }

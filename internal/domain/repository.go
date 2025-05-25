@@ -17,7 +17,7 @@ type ListOptions struct {
 type LeafRepository interface {
 	Get(ctx context.Context, id string) (*Leaf, error)
 	List(ctx context.Context, opts ListOptions) ([]Leaf, error)
-	Put(ctx context.Context, leaf *Leaf) error
+	Put(ctx context.Context, leaf *Leaf) (*Leaf, error)
 	Update(ctx context.Context, id string, update *Leaf) error
 	Delete(ctx context.Context, id string) error
 }

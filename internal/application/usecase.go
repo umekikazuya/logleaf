@@ -1,9 +1,10 @@
-package usecase
+package application
 
 import (
 	"context"
 	"errors"
 
+	"github.com/google/uuid"
 	"github.com/umekikazuya/logleaf/internal/domain"
 )
 
@@ -28,8 +29,15 @@ func (u *LeafUsecase) GetLeaf(ctx context.Context, id string) (*domain.Leaf, err
 	return u.repo.Get(ctx, id)
 }
 
-func (u *LeafUsecase) AddLeaf(ctx context.Context, leaf *domain.Leaf) error {
-	return u.repo.Put(ctx, leaf)
+func (u *LeafUsecase) AddLeaf(ctx context.Context, dto *LeafInputDTO) (*domain.Leaf, error) {
+	leaf := domain.Leaf{
+		ID:       uuid.New().String(),
+		Title:    dto.Title,
+		URL:      dto.URL,
+		Platform: dto.Platform,
+		Tags:     dto.Tags,
+	}
+	return u.repo.Put(ctx, &leaf)
 }
 
 func (u *LeafUsecase) UpdateLeaf(ctx context.Context, id string, update *domain.Leaf) error {
