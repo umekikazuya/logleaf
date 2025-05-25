@@ -50,7 +50,7 @@ func (r *LeafDynamoRepository) List(ctx context.Context, opts repository.ListOpt
 	// QueryInputの作成
 	queryInput := &dynamodb.QueryInput{
 		TableName:              &r.TableName,
-		KeyConditionExpression: awsString("pk = :pk"),
+		KeyConditionExpression: aws.String("pk = :pk"),
 		ExpressionAttributeValues: map[string]types.AttributeValue{
 			":pk": &types.AttributeValueMemberS{Value: "USER#me"},
 		},
@@ -108,7 +108,7 @@ func (r *LeafDynamoRepository) Update(ctx context.Context, id string, update *do
 			"pk": &types.AttributeValueMemberS{Value: "USER#me"},
 			"sk": &types.AttributeValueMemberS{Value: id},
 		},
-		UpdateExpression: awsString(updateExpr),
+		UpdateExpression: aws.String(updateExpr),
 		ExpressionAttributeNames: map[string]string{
 			"#t":  "title",
 			"#u":  "url",
@@ -136,9 +136,4 @@ func (r *LeafDynamoRepository) Delete(ctx context.Context, id string) error {
 		},
 	})
 	return err
-}
-
-// awsStringはstringのポインタを返すヘルパー
-func awsString(s string) *string {
-	return &s
 }

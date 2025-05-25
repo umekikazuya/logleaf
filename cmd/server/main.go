@@ -31,6 +31,9 @@ func main() {
 	cfg, err := config.LoadDefaultConfig(context.Background(),
 		config.WithRegion(region),
 	)
+	if err != nil {
+		panic("Failed to load AWS config: " + err.Error())
+	}
 	client := dynamodb.NewFromConfig(cfg, func(o *dynamodb.Options) {
 		if endpoint != "" {
 			o.BaseEndpoint = &endpoint
