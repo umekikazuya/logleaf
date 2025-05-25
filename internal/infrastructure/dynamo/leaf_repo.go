@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/feature/dynamodb/attributevalue"
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb/types"
@@ -46,35 +47,20 @@ func (r *LeafDynamoRepository) Get(ctx context.Context, id string) (*domain.Leaf
 }
 
 func (r *LeafDynamoRepository) List(ctx context.Context, opts repository.ListOptions) ([]domain.Leaf, error) {
-	// DynamoDBにそもそも接続できてるか確認
-	if r.Client == nil {
-		return nil, fmt.Errorf("dynamodb client is not initialized")
-	}
-
-	listTablesOut, err1 := r.Client.ListTables(ctx, &dynamodb.ListTablesInput{})
-	if err1 != nil {
-		fmt.Println("接続エラー:", err1)
-	} else {
-		fmt.Println("接続成功。テーブル一覧:", listTablesOut.TableNames)
-		found := false
-		for _, t := range listTablesOut.TableNames {
-			if t == r.TableName {
-				found = true
-				break
-			}
-		}
-		if !found {
-			fmt.Printf("テーブル '%s' が見つかりません\n", r.TableName)
-		}
-	}
-
-	queryOut, err := r.Client.Query(ctx, &dynamodb.QueryInput{
+	// QueryInputの作成
+	queryInput := &dynamodb.QueryInput{
 		TableName:              &r.TableName,
 		KeyConditionExpression: awsString("pk = :pk"),
 		ExpressionAttributeValues: map[string]types.AttributeValue{
 			":pk": &types.AttributeValueMemberS{Value: "USER#me"},
 		},
-	})
+	}
+	// Limitの適用
+	if opts.Limit > 0 {
+		queryInput.Limit = aws.Int32(int32(opts.Limit))
+	}
+	// フィルタリングの適用
+	queryOut, err := r.Client.Query(ctx, queryInput)
 	if err != nil {
 		return nil, err
 	}

@@ -42,10 +42,8 @@ func (h *LeafHandler) AddLeaf(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid body"})
 		return
 	}
-	var leafID string
-	if input.ID != "" {
-		leafID = input.ID
-	} else {
+	var leafID string = input.ID
+	if input.ID == "" {
 		leafID = fmt.Sprintf("leaf-%s", uuid.New().String())
 	}
 	l := domain.NewLeaf(
@@ -55,7 +53,6 @@ func (h *LeafHandler) AddLeaf(c *gin.Context) {
 		input.Platform,
 	)
 
-	fmt.Println(c.Request.Context())
 	app_err := h.Usecase.AddLeaf(c.Request.Context(), l)
 	if app_err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to add leaf"})
