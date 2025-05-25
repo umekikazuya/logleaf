@@ -10,7 +10,6 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb/types"
 	"github.com/umekikazuya/logleaf/internal/domain"
-	"github.com/umekikazuya/logleaf/internal/interface/repository"
 )
 
 type LeafDynamoRepository struct {
@@ -46,7 +45,7 @@ func (r *LeafDynamoRepository) Get(ctx context.Context, id string) (*domain.Leaf
 	return &leaf, nil
 }
 
-func (r *LeafDynamoRepository) List(ctx context.Context, opts repository.ListOptions) ([]domain.Leaf, error) {
+func (r *LeafDynamoRepository) List(ctx context.Context, opts domain.ListOptions) ([]domain.Leaf, error) {
 	// QueryInputの作成
 	queryInput := &dynamodb.QueryInput{
 		TableName:              &r.TableName,

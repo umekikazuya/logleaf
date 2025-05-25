@@ -7,7 +7,6 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 	"github.com/umekikazuya/logleaf/internal/domain"
-	"github.com/umekikazuya/logleaf/internal/interface/repository"
 	"github.com/umekikazuya/logleaf/internal/usecase"
 )
 
@@ -21,7 +20,7 @@ func NewLeafHandler(u *usecase.LeafUsecase) *LeafHandler {
 
 // Index /api/leaves
 func (h *LeafHandler) ListLeaves(c *gin.Context) {
-	opts := repository.ListOptions{}
+	opts := domain.ListOptions{}
 	leaves, err := h.Usecase.ListLeaves(c.Request.Context(), opts)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to fetch leaves"})

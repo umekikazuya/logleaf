@@ -5,20 +5,19 @@ import (
 	"errors"
 
 	"github.com/umekikazuya/logleaf/internal/domain"
-	"github.com/umekikazuya/logleaf/internal/interface/repository"
 )
 
 // LeafUsecase provides application-level operations for managing Leaf entities.
 // It interacts with the LeafRepository to perform CRUD operations and other business logic.
 type LeafUsecase struct {
-	repo repository.LeafRepository
+	repo domain.LeafRepository
 }
 
-func NewLeafUsecase(repo repository.LeafRepository) *LeafUsecase {
+func NewLeafUsecase(repo domain.LeafRepository) *LeafUsecase {
 	return &LeafUsecase{repo: repo}
 }
 
-func (u *LeafUsecase) ListLeaves(ctx context.Context, opts repository.ListOptions) ([]domain.Leaf, error) {
+func (u *LeafUsecase) ListLeaves(ctx context.Context, opts domain.ListOptions) ([]domain.Leaf, error) {
 	return u.repo.List(ctx, opts)
 }
 
