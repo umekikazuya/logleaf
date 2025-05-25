@@ -3,9 +3,9 @@ package handler
 import (
 	"fmt"
 	"net/http"
-	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
 	"github.com/umekikazuya/logleaf/internal/domain"
 	"github.com/umekikazuya/logleaf/internal/interface/repository"
 	"github.com/umekikazuya/logleaf/internal/usecase"
@@ -24,7 +24,7 @@ func (h *LeafHandler) ListLeaves(c *gin.Context) {
 	opts := repository.ListOptions{}
 	leaves, err := h.Usecase.ListLeaves(c.Request.Context(), opts)
 	if err != nil {
-		c.JSON(http.StatusForbidden, gin.H{"error": "failed to fetch leaves"})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to fetch leaves"})
 		return
 	}
 	c.JSON(http.StatusOK, leaves)
@@ -46,7 +46,7 @@ func (h *LeafHandler) AddLeaf(c *gin.Context) {
 	if input.ID != "" {
 		leafID = input.ID
 	} else {
-		leafID = fmt.Sprintf("leaf-%d", time.Now().UnixNano())
+		leafID = fmt.Sprintf("leaf-%s", uuid.New().String())
 	}
 	l := domain.NewLeaf(
 		leafID,
