@@ -95,13 +95,13 @@ func (r *LeafDynamoRepository) Put(ctx context.Context, leaf *domain.Leaf) (*dom
 	return leaf, nil
 }
 
-func (r *LeafDynamoRepository) Update(ctx context.Context, id string, update *domain.Leaf) error {
+func (r *LeafDynamoRepository) Update(ctx context.Context, update *domain.Leaf) error {
 	updateExpr := "SET #t = :title, #u = :url, #p = :platform, #tg = :tags, #r = :read"
 	_, err := r.Client.UpdateItem(ctx, &dynamodb.UpdateItemInput{
 		TableName: &r.TableName,
 		Key: map[string]types.AttributeValue{
 			"pk": &types.AttributeValueMemberS{Value: "USER#me"},
-			"sk": &types.AttributeValueMemberS{Value: id},
+			"sk": &types.AttributeValueMemberS{Value: update.ID},
 		},
 		UpdateExpression: aws.String(updateExpr),
 		ExpressionAttributeNames: map[string]string{

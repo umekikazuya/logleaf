@@ -40,8 +40,9 @@ func (u *LeafUsecase) AddLeaf(ctx context.Context, dto *LeafInputDTO) (*domain.L
 	return u.repo.Put(ctx, &leaf)
 }
 
-func (u *LeafUsecase) UpdateLeaf(ctx context.Context, id string, update *domain.Leaf) error {
-	return u.repo.Update(ctx, id, update)
+func (u *LeafUsecase) UpdateLeaf(ctx context.Context, update *LeafInputDTO) error {
+	leaf := LeafInputDTOToDomain(update)
+	return u.repo.Update(ctx, leaf)
 }
 
 func (u *LeafUsecase) DeleteLeaf(ctx context.Context, id string) error {

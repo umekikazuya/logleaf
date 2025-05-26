@@ -57,7 +57,7 @@ func (h *LeafHandler) AddLeaf(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request body"})
 		return
 	}
-	// Convert to DTO
+	// Convert to Dto
 	inputDto := application.LeafInputDTO{
 		Title:    req.Title,
 		URL:      req.URL,
@@ -78,16 +78,22 @@ func (h *LeafHandler) AddLeaf(c *gin.Context) {
 func (h *LeafHandler) UpdateLeaf(c *gin.Context) {
 	id := c.Param("id")
 
-	var input domain.Leaf
-	if err := c.ShouldBindJSON(&input); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid body"})
+	var req UpdateLeafRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request body"})
 		return
 	}
 
-	if err := h.Usecase.UpdateLeaf(c.Request.Context(), id, &input); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-		return
+	// Convert to Dto
+	inputDto := application.LeafInputDTO{
+		ID:       id,
+		Title:    req.Title,
+		URL:      req.URL,
+		Platform: req.Platform,
+		Tags:     req.Tags,
 	}
+
+	h.Usecase.UpdateLeaf(c.Request.Context(), &inputDto)
 	c.JSON(http.StatusOK, gin.H{"message": "updated"})
 }
 
