@@ -14,6 +14,7 @@ func NewRouter(leafHandler *handler.LeafHandler) *gin.Engine {
 		api.POST("/leaves", leafHandler.AddLeaf)
 		api.GET("/leaves/:id", leafHandler.GetLeaf)
 		api.PATCH("/leaves/:id", leafHandler.UpdateLeaf)
+		api.PATCH("/leaves/:id/read", leafHandler.ReadLeaf)
 		api.DELETE("/leaves/:id", leafHandler.DeleteLeaf)
 	}
 	return r

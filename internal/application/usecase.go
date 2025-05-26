@@ -43,7 +43,27 @@ func (u *LeafUsecase) AddLeaf(ctx context.Context, dto *LeafInputDTO) (*domain.L
 }
 
 func (u *LeafUsecase) UpdateLeaf(ctx context.Context, update *LeafInputDTO) error {
-	leaf := LeafInputDTOToDomain(update)
+	leaf := domain.NewLeaf(
+		update.ID,
+		update.Title,
+		update.URL,
+		update.Platform,
+	)
+	if update.Tags != nil {
+		leaf.UpdateTags(update.Tags)
+	}
+	return u.repo.Update(ctx, leaf)
+}
+
+func (u *LeafUsecase) ReadLeaf(ctx context.Context, id string) error {
+	leaf, err := u.repo.Get(ctx, id)
+	if err != nil {
+		return err
+	}
+	if leaf == nil {
+		return errors.New("leaf not found")
+	}
+	leaf.MarkAsRead()
 	return u.repo.Update(ctx, leaf)
 }
 
