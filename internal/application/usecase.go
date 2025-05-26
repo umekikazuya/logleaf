@@ -30,14 +30,16 @@ func (u *LeafUsecase) GetLeaf(ctx context.Context, id string) (*domain.Leaf, err
 }
 
 func (u *LeafUsecase) AddLeaf(ctx context.Context, dto *LeafInputDTO) (*domain.Leaf, error) {
-	leaf := domain.Leaf{
-		ID:       uuid.New().String(),
-		Title:    dto.Title,
-		URL:      dto.URL,
-		Platform: dto.Platform,
-		Tags:     dto.Tags,
+	leaf := domain.NewLeaf(
+		uuid.NewString(),
+		dto.Title,
+		dto.URL,
+		dto.Platform,
+	)
+	if dto.Tags != nil {
+		leaf.UpdateTags(dto.Tags)
 	}
-	return u.repo.Put(ctx, &leaf)
+	return u.repo.Put(ctx, leaf)
 }
 
 func (u *LeafUsecase) UpdateLeaf(ctx context.Context, update *LeafInputDTO) error {

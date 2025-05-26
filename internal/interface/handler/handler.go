@@ -93,7 +93,11 @@ func (h *LeafHandler) UpdateLeaf(c *gin.Context) {
 		Tags:     req.Tags,
 	}
 
-	h.Usecase.UpdateLeaf(c.Request.Context(), &inputDto)
+	err := h.Usecase.UpdateLeaf(c.Request.Context(), &inputDto)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
 	c.JSON(http.StatusOK, gin.H{"message": "updated"})
 }
 
