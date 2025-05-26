@@ -16,7 +16,12 @@ services:
     depends_on:
       - dynamodb
   dynamodb:
-    command: "-jar DynamoDBLocal.jar -sharedDb -dbPath ./data"
+    command:
+      - "-jar"
+      - "DynamoDBLocal.jar"
+      - "-sharedDb"
+      - "-dbPath"
+      - "./data"
     image: "amazon/dynamodb-local:latest"
     container_name: logleaf-dynamodb
     ports:

@@ -5,7 +5,6 @@ COPY go.mod go.sum ./
 RUN go mod download
 COPY . .
 RUN CGO_ENABLED=0 GOOS=linux go build -o logleaf-server ./cmd/server/main.go
-RUN go install github.com/cosmtrek/air@latest
 
 FROM alpine:3.19
 WORKDIR /app

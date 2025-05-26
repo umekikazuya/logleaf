@@ -28,7 +28,7 @@ go.work.sum
 .DS_Store
 
 # DynamoDB Local files
-dynamodb/
+docker/dynamodb/
 
 # temporary files
 tmp/
