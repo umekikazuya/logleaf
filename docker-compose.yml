@@ -1,0 +1,26 @@
+version: '3.8'
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    container_name: logleaf-app
+    ports:
+      - "8082:8082"
+    volumes:
+      - ./:/app
+      - ./tmp:/app/tmp
+    env_file:
+      - .env
+    command: ["air", "-c", ".air.toml"]
+    depends_on:
+      - dynamodb
+  dynamodb:
+    command: "-jar DynamoDBLocal.jar -sharedDb -dbPath ./data"
+    image: "amazon/dynamodb-local:latest"
+    container_name: logleaf-dynamodb
+    ports:
+      - "8000:8000"
+    volumes:
+      - "./docker/dynamodb:/home/dynamodblocal/data"
+    working_dir: /home/dynamodblocal

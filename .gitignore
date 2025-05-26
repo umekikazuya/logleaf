@@ -26,3 +26,9 @@ go.work.sum
 
 # os generated files
 .DS_Store
+
+# DynamoDB Local files
+dynamodb/
+
+# temporary files
+tmp/
