@@ -20,7 +20,7 @@ func NewInMemoryLeafRepositoryWithSample() *InMemoryLeafRepository {
 	repo := NewInMemoryLeafRepository()
 	repo.leaves["1"] = &domain.Leaf{
 		ID:       "1",
-		Title:    "サンプル記事1",
+		Note:     "サンプル記事1",
 		URL:      "https://example.com/1",
 		Platform: "Qiita",
 		Tags:     []string{"Go", "サンプル"},
@@ -28,7 +28,7 @@ func NewInMemoryLeafRepositoryWithSample() *InMemoryLeafRepository {
 	}
 	repo.leaves["2"] = &domain.Leaf{
 		ID:       "2",
-		Title:    "サンプル記事2",
+		Note:     "サンプル記事2",
 		URL:      "https://example.com/2",
 		Platform: "Zenn",
 		Tags:     []string{"AWS", "DynamoDB"},

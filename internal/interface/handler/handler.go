@@ -59,7 +59,7 @@ func (h *LeafHandler) AddLeaf(c *gin.Context) {
 	}
 	// Convert to Dto
 	inputDto := application.LeafInputDTO{
-		Title:    req.Title,
+		Note:     req.Title,
 		URL:      req.URL,
 		Platform: req.Platform,
 		Tags:     req.Tags,
@@ -87,7 +87,7 @@ func (h *LeafHandler) UpdateLeaf(c *gin.Context) {
 	// Convert to Dto
 	inputDto := application.LeafInputDTO{
 		ID:       id,
-		Title:    req.Title,
+		Note:     req.Title,
 		URL:      req.URL,
 		Platform: req.Platform,
 		Tags:     req.Tags,

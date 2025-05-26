@@ -75,7 +75,7 @@ func (r *LeafDynamoRepository) Put(ctx context.Context, leaf *domain.Leaf) (*dom
 		"pk":        "USER#me",
 		"sk":        leaf.ID,
 		"id":        leaf.ID,
-		"title":     leaf.Title,
+		"note":      leaf.Note,
 		"url":       leaf.URL,
 		"platform":  leaf.Platform,
 		"tags":      leaf.Tags,
@@ -96,7 +96,7 @@ func (r *LeafDynamoRepository) Put(ctx context.Context, leaf *domain.Leaf) (*dom
 }
 
 func (r *LeafDynamoRepository) Update(ctx context.Context, update *domain.Leaf) error {
-	updateExpr := "SET #t = :title, #u = :url, #p = :platform, #tg = :tags, #r = :read"
+	updateExpr := "SET #t = :note, #u = :url, #p = :platform, #tg = :tags, #r = :read"
 	_, err := r.Client.UpdateItem(ctx, &dynamodb.UpdateItemInput{
 		TableName: &r.TableName,
 		Key: map[string]types.AttributeValue{
@@ -105,14 +105,14 @@ func (r *LeafDynamoRepository) Update(ctx context.Context, update *domain.Leaf) 
 		},
 		UpdateExpression: aws.String(updateExpr),
 		ExpressionAttributeNames: map[string]string{
-			"#t":  "title",
+			"#t":  "note",
 			"#u":  "url",
 			"#p":  "platform",
 			"#tg": "tags",
 			"#r":  "read",
 		},
 		ExpressionAttributeValues: map[string]types.AttributeValue{
-			":title":    &types.AttributeValueMemberS{Value: update.Title},
+			":note":     &types.AttributeValueMemberS{Value: update.Note},
 			":url":      &types.AttributeValueMemberS{Value: update.URL},
 			":platform": &types.AttributeValueMemberS{Value: update.Platform},
 			":tags":     &types.AttributeValueMemberSS{Value: update.Tags},
@@ -138,4 +138,63 @@ func (r *LeafDynamoRepository) Delete(ctx context.Context, id string) error {
 		return errors.New("leaf not found")
 	}
 	return nil
+}
+
+// DynamoDB永続化用レコード
+
+type LeafRecord struct {
+	PK       string   `dynamodbav:"pk"`
+	SK       string   `dynamodbav:"sk"`
+	ID       string   `dynamodbav:"id"`
+	Note     string   `dynamodbav:"note"`
+	URL      string   `dynamodbav:"url"`
+	Platform string   `dynamodbav:"platform"`
+	Tags     []string `dynamodbav:"tags"`
+	Read     bool     `dynamodbav:"read"`
+	SyncedAt string   `dynamodbav:"synced_at"`
+}
+
+// EntityをRecordに変換
+func LeafToRecord(l *domain.Leaf) *LeafRecord {
+	tags := make([]string, len(l.Tags()))
+	for i, t := range l.Tags() {
+		tags[i] = t.String()
+	}
+	return &LeafRecord{
+		PK:       "USER#me",
+		SK:       l.ID().String(),
+		ID:       l.ID().String(),
+		Note:     l.Note(),
+		URL:      l.URL().String(),
+		Platform: l.Platform(),
+		Tags:     tags,
+		Read:     l.Read(),
+		SyncedAt: l.SyncedAt().Format(time.RFC3339),
+	}
+}
+
+// RecordをEntityに変換
+func RecordToLeaf(r *LeafRecord) (*domain.Leaf, error) {
+	// id, url, syncedAtはNewLeafで使わないため削除
+	tags := make([]string, 0, len(r.Tags))
+	tagSet := make(map[string]struct{})
+	for _, v := range r.Tags {
+		if _, exists := tagSet[v]; exists {
+			return nil, errors.New("タグが重複しています")
+		}
+		tagSet[v] = struct{}{}
+		tags = append(tags, v)
+	}
+	if len(tags) > 10 {
+		return nil, domain.ErrTagLimitExceeded
+	}
+	leaf, err := domain.NewLeaf(r.Note, r.URL, r.Platform, tags)
+	if err != nil {
+		return nil, err
+	}
+	if r.Read {
+		_ = leaf.MarkAsRead()
+	}
+	// syncedAtはprivateなので反映できない。必要ならdomain.LeafにSetSyncedAtを追加すること。
+	return leaf, nil
 }
