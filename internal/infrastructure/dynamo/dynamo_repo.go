@@ -2,7 +2,7 @@ package dynamo
 
 import (
 	"context"
-	"fmt"
+	"errors"
 	"time"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
@@ -10,7 +10,6 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb/types"
 	"github.com/umekikazuya/logleaf/internal/domain"
-	"github.com/umekikazuya/logleaf/internal/interface/repository"
 )
 
 type LeafDynamoRepository struct {
@@ -26,7 +25,7 @@ func NewLeafDynamoRepository(client *dynamodb.Client, tableName string) *LeafDyn
 }
 
 func (r *LeafDynamoRepository) Get(ctx context.Context, id string) (*domain.Leaf, error) {
-	out, err := r.Client.GetItem(ctx, &dynamodb.GetItemInput{
+	output, err := r.Client.GetItem(ctx, &dynamodb.GetItemInput{
 		TableName: &r.TableName,
 		Key: map[string]types.AttributeValue{
 			"pk": &types.AttributeValueMemberS{Value: "USER#me"},
@@ -36,17 +35,17 @@ func (r *LeafDynamoRepository) Get(ctx context.Context, id string) (*domain.Leaf
 	if err != nil {
 		return nil, err
 	}
-	if out.Item == nil {
-		return nil, nil
+	if output.Item == nil {
+		return nil, errors.New("leaf not found")
 	}
 	var leaf domain.Leaf
-	if err := attributevalue.UnmarshalMap(out.Item, &leaf); err != nil {
+	if err := attributevalue.UnmarshalMap(output.Item, &leaf); err != nil {
 		return nil, err
 	}
 	return &leaf, nil
 }
 
-func (r *LeafDynamoRepository) List(ctx context.Context, opts repository.ListOptions) ([]domain.Leaf, error) {
+func (r *LeafDynamoRepository) List(ctx context.Context, opts domain.ListOptions) ([]domain.Leaf, error) {
 	// QueryInputの作成
 	queryInput := &dynamodb.QueryInput{
 		TableName:              &r.TableName,
@@ -71,14 +70,7 @@ func (r *LeafDynamoRepository) List(ctx context.Context, opts repository.ListOpt
 	return leaves, nil
 }
 
-func (r *LeafDynamoRepository) Put(ctx context.Context, leaf *domain.Leaf) error {
-	if r.Client == nil {
-		return fmt.Errorf("dynamodb client is not initialized")
-	}
-	if leaf.ID == "" {
-		return fmt.Errorf("leaf.ID cannot be empty")
-	}
-
+func (r *LeafDynamoRepository) Put(ctx context.Context, leaf *domain.Leaf) (*domain.Leaf, error) {
 	item, err := attributevalue.MarshalMap(map[string]any{
 		"pk":        "USER#me",
 		"sk":        leaf.ID,
@@ -91,22 +83,25 @@ func (r *LeafDynamoRepository) Put(ctx context.Context, leaf *domain.Leaf) error
 		"synced_at": time.Now().UTC().Format(time.RFC3339),
 	})
 	if err != nil {
-		return err
+		return nil, err
 	}
 	_, err = r.Client.PutItem(ctx, &dynamodb.PutItemInput{
 		TableName: &r.TableName,
 		Item:      item,
 	})
-	return err
+	if err != nil {
+		return nil, err
+	}
+	return leaf, nil
 }
 
-func (r *LeafDynamoRepository) Update(ctx context.Context, id string, update *domain.Leaf) error {
+func (r *LeafDynamoRepository) Update(ctx context.Context, update *domain.Leaf) error {
 	updateExpr := "SET #t = :title, #u = :url, #p = :platform, #tg = :tags, #r = :read"
 	_, err := r.Client.UpdateItem(ctx, &dynamodb.UpdateItemInput{
 		TableName: &r.TableName,
 		Key: map[string]types.AttributeValue{
 			"pk": &types.AttributeValueMemberS{Value: "USER#me"},
-			"sk": &types.AttributeValueMemberS{Value: id},
+			"sk": &types.AttributeValueMemberS{Value: update.ID},
 		},
 		UpdateExpression: aws.String(updateExpr),
 		ExpressionAttributeNames: map[string]string{
@@ -128,12 +123,19 @@ func (r *LeafDynamoRepository) Update(ctx context.Context, id string, update *do
 }
 
 func (r *LeafDynamoRepository) Delete(ctx context.Context, id string) error {
-	_, err := r.Client.DeleteItem(ctx, &dynamodb.DeleteItemInput{
+	old, err := r.Client.DeleteItem(ctx, &dynamodb.DeleteItemInput{
 		TableName: &r.TableName,
 		Key: map[string]types.AttributeValue{
 			"pk": &types.AttributeValueMemberS{Value: "USER#me"},
 			"sk": &types.AttributeValueMemberS{Value: id},
 		},
+		ReturnValues: types.ReturnValueAllOld,
 	})
-	return err
+	if err != nil {
+		return err
+	}
+	if old.Attributes == nil {
+		return errors.New("leaf not found")
+	}
+	return nil
 }

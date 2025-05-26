@@ -1,24 +1,24 @@
-package usecase
+package application
 
 import (
 	"context"
 	"errors"
 
+	"github.com/google/uuid"
 	"github.com/umekikazuya/logleaf/internal/domain"
-	"github.com/umekikazuya/logleaf/internal/interface/repository"
 )
 
 // LeafUsecase provides application-level operations for managing Leaf entities.
 // It interacts with the LeafRepository to perform CRUD operations and other business logic.
 type LeafUsecase struct {
-	repo repository.LeafRepository
+	repo domain.LeafRepository
 }
 
-func NewLeafUsecase(repo repository.LeafRepository) *LeafUsecase {
+func NewLeafUsecase(repo domain.LeafRepository) *LeafUsecase {
 	return &LeafUsecase{repo: repo}
 }
 
-func (u *LeafUsecase) ListLeaves(ctx context.Context, opts repository.ListOptions) ([]domain.Leaf, error) {
+func (u *LeafUsecase) ListLeaves(ctx context.Context, opts domain.ListOptions) ([]domain.Leaf, error) {
 	return u.repo.List(ctx, opts)
 }
 
@@ -29,12 +29,22 @@ func (u *LeafUsecase) GetLeaf(ctx context.Context, id string) (*domain.Leaf, err
 	return u.repo.Get(ctx, id)
 }
 
-func (u *LeafUsecase) AddLeaf(ctx context.Context, leaf *domain.Leaf) error {
+func (u *LeafUsecase) AddLeaf(ctx context.Context, dto *LeafInputDTO) (*domain.Leaf, error) {
+	leaf := domain.NewLeaf(
+		uuid.NewString(),
+		dto.Title,
+		dto.URL,
+		dto.Platform,
+	)
+	if dto.Tags != nil {
+		leaf.UpdateTags(dto.Tags)
+	}
 	return u.repo.Put(ctx, leaf)
 }
 
-func (u *LeafUsecase) UpdateLeaf(ctx context.Context, id string, update *domain.Leaf) error {
-	return u.repo.Update(ctx, id, update)
+func (u *LeafUsecase) UpdateLeaf(ctx context.Context, update *LeafInputDTO) error {
+	leaf := LeafInputDTOToDomain(update)
+	return u.repo.Update(ctx, leaf)
 }
 
 func (u *LeafUsecase) DeleteLeaf(ctx context.Context, id string) error {

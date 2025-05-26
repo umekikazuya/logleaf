@@ -4,20 +4,20 @@ import (
 	"time"
 )
 
-// Leaf represents a stock article or bookmarked knowledge unit.
+// Entity represents a leaf in the system.
 type Leaf struct {
-	ID       string    `json:"id"`
-	Title    string    `json:"title"`
-	URL      string    `json:"url"`
-	Platform string    `json:"platform"`
-	Tags     []string  `json:"tags"`
-	Read     bool      `json:"read"`
-	SyncedAt time.Time `json:"synced_at"`
+	ID       string
+	Title    string
+	URL      string
+	Platform string
+	Tags     []string
+	Read     bool
+	SyncedAt time.Time
 }
 
 // NewLeaf creates a new Leaf instance.
 func NewLeaf(
-	id, title string, url string, platform string,
+	id string, title string, url string, platform string,
 ) *Leaf {
 	return &Leaf{
 		ID:       id,

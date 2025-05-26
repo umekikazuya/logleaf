@@ -7,9 +7,9 @@ import (
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
 	"github.com/joho/godotenv"
+	"github.com/umekikazuya/logleaf/internal/application"
 	"github.com/umekikazuya/logleaf/internal/infrastructure/dynamo"
 	"github.com/umekikazuya/logleaf/internal/interface/handler"
-	"github.com/umekikazuya/logleaf/internal/usecase"
 )
 
 // アプリケーションの依存関係を初期化
@@ -43,7 +43,7 @@ func InitializeDependencies() (*handler.LeafHandler, string) {
 	}
 
 	leafRepo := dynamo.NewLeafDynamoRepository(client, tableName)
-	leafUsecase := usecase.NewLeafUsecase(leafRepo)
+	leafUsecase := application.NewLeafUsecase(leafRepo)
 	leafHandler := handler.NewLeafHandler(leafUsecase)
 
 	// Portを環境変数から取得（デフォルト8080）

@@ -4,7 +4,6 @@ import (
 	"context"
 
 	"github.com/umekikazuya/logleaf/internal/domain"
-	"github.com/umekikazuya/logleaf/internal/interface/repository"
 )
 
 type InMemoryLeafRepository struct {
@@ -46,7 +45,7 @@ func (r *InMemoryLeafRepository) Get(ctx context.Context, id string) (*domain.Le
 	return leaf, nil
 }
 
-func (r *InMemoryLeafRepository) List(ctx context.Context, opts repository.ListOptions) ([]domain.Leaf, error) {
+func (r *InMemoryLeafRepository) List(ctx context.Context, opts domain.ListOptions) ([]domain.Leaf, error) {
 	result := make([]domain.Leaf, 0, len(r.leaves))
 	for _, leaf := range r.leaves {
 		result = append(result, *leaf)
