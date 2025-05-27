@@ -2,14 +2,19 @@ package domain
 
 import (
 	"errors"
+	"net/url"
+	"strconv"
 	"time"
 
 	"github.com/google/uuid"
 )
 
+// タグの最大数
+const MaxTagsPerLeaf = 10
+
 // ドメイン固有エラー
 var (
-	ErrTagLimitExceeded = errors.New("タグは10個までです。")
+	ErrTagLimitExceeded = errors.New("タグは" + strconv.Itoa(MaxTagsPerLeaf) + "個までです。")
 	ErrAlreadyRead      = errors.New("既読状態です。")
 )
 
@@ -22,7 +27,7 @@ type LeafID struct {
 
 func NewLeafID(value string) (LeafID, error) {
 	if value == "" {
-		return LeafID{}, errors.New("LeafID must not be empty")
+		return LeafID{}, errors.New("LeafIDは空にできません")
 	}
 	return LeafID{value: value}, nil
 }
@@ -47,11 +52,15 @@ type LeafURL struct {
 
 func NewLeafURL(value string) (LeafURL, error) {
 	if value == "" {
-		return LeafURL{}, errors.New("URL must not be empty")
+		return LeafURL{}, errors.New("URLは空にできません")
 	}
 	// URLバリデーション
 	if len(value) < 3 || len(value) > 2048 {
-		return LeafURL{}, errors.New("URL must be between 3 and 2048 characters")
+		return LeafURL{}, errors.New("URLは3文字以上2048文字以下である必要があります")
+	}
+	// URL形式の検証
+	if _, err := url.ParseRequestURI(value); err != nil {
+		return LeafURL{}, errors.New("URLの形式が無効です " + err.Error())
 	}
 	return LeafURL{value: value}, nil
 }
@@ -72,7 +81,7 @@ type Tag struct {
 
 func NewTag(value string) (Tag, error) {
 	if value == "" {
-		return Tag{}, errors.New("Tag must not be empty")
+		return Tag{}, errors.New("Tagは空にできません")
 	}
 	return Tag{value: value}, nil
 }
@@ -113,10 +122,10 @@ func (l *Leaf) SyncedAt() time.Time { return l.syncedAt }
 // バリデーション一括
 func NewLeaf(note string, url string, platform string, tagValues []string) (*Leaf, error) {
 	if note == "" {
-		return nil, errors.New("note must not be empty")
+		return nil, errors.New("Noteは空にできません")
 	}
 	if platform == "" {
-		return nil, errors.New("platform must not be empty")
+		return nil, errors.New("Platformは空にできません")
 	}
 	id := NewLeafIDFromUUID()
 	leafURL, err := NewLeafURL(url)
@@ -136,7 +145,7 @@ func NewLeaf(note string, url string, platform string, tagValues []string) (*Lea
 		tagSet[t.value] = struct{}{}
 		tags = append(tags, t)
 	}
-	if len(tags) > 10 {
+	if len(tags) > MaxTagsPerLeaf {
 		return nil, ErrTagLimitExceeded
 	}
 	return &Leaf{
@@ -153,7 +162,7 @@ func NewLeaf(note string, url string, platform string, tagValues []string) (*Lea
 // ノート内容の変更
 func (l *Leaf) UpdateNote(note string) error {
 	if note == "" {
-		return errors.New("note must not be empty")
+		return errors.New("Noteは空にできません")
 	}
 	l.note = note
 	return nil
@@ -162,7 +171,7 @@ func (l *Leaf) UpdateNote(note string) error {
 // プラットフォームの変更
 func (l *Leaf) UpdatePlatform(platform string) error {
 	if platform == "" {
-		return errors.New("platform must not be empty")
+		return errors.New("Platformは空にできません")
 	}
 	l.platform = platform
 	return nil
@@ -179,7 +188,7 @@ func (l *Leaf) MarkAsRead() error {
 
 // タグのバリデーション付き更新（重複・上限チェック）
 func (l *Leaf) UpdateTags(tags []Tag) error {
-	if len(tags) > 10 {
+	if len(tags) > MaxTagsPerLeaf {
 		return ErrTagLimitExceeded
 	}
 	tagSet := make(map[string]struct{})

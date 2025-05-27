@@ -42,9 +42,11 @@ func (u *LeafUsecase) UpdateLeaf(ctx context.Context, update *LeafInputDTO) erro
 	if err != nil {
 		return err
 	}
+	// Noteの更新
 	if err := leaf.UpdateNote(update.Note); err != nil {
 		return err
 	}
+	// Platformの更新
 	if err := leaf.UpdatePlatform(update.Platform); err != nil {
 		return err
 	}
@@ -60,6 +62,18 @@ func (u *LeafUsecase) UpdateLeaf(ctx context.Context, update *LeafInputDTO) erro
 	if err := leaf.UpdateTags(tags); err != nil {
 		return err
 	}
+	return u.repo.Update(ctx, leaf)
+}
+
+func (u *LeafUsecase) ReadLeaf(ctx context.Context, id string) error {
+	leaf, err := u.repo.Get(ctx, id)
+	if err != nil {
+		return err
+	}
+	if leaf == nil {
+		return errors.New("leaf not found")
+	}
+	leaf.MarkAsRead()
 	return u.repo.Update(ctx, leaf)
 }
 

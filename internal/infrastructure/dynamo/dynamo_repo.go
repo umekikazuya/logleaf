@@ -38,11 +38,11 @@ func (r *LeafDynamoRepository) Get(ctx context.Context, id string) (*domain.Leaf
 	if output.Item == nil {
 		return nil, errors.New("leaf not found")
 	}
-	var leaf domain.Leaf
-	if err := attributevalue.UnmarshalMap(output.Item, &leaf); err != nil {
+	var record LeafRecord
+	if err := attributevalue.UnmarshalMap(output.Item, &record); err != nil {
 		return nil, err
 	}
-	return &leaf, nil
+	return RecordToLeaf(&record)
 }
 
 func (r *LeafDynamoRepository) List(ctx context.Context, opts domain.ListOptions) ([]domain.Leaf, error) {
@@ -84,8 +84,9 @@ func (r *LeafDynamoRepository) Put(ctx context.Context, leaf *domain.Leaf) (*dom
 		return nil, err
 	}
 	putItem, err := r.Client.PutItem(ctx, &dynamodb.PutItemInput{
-		TableName: &r.TableName,
-		Item:      item,
+		TableName:    &r.TableName,
+		Item:         item,
+		ReturnValues: types.ReturnValueAllNew,
 	})
 	if err != nil {
 		return nil, err
@@ -194,26 +195,12 @@ func LeafToRecord(l *domain.Leaf) *LeafRecord {
 
 // RecordをEntityに変換
 func RecordToLeaf(r *LeafRecord) (*domain.Leaf, error) {
-	// id, url, syncedAtはNewLeafで使わないため削除
-	tags := make([]string, 0, len(r.Tags))
-	tagSet := make(map[string]struct{})
-	for _, v := range r.Tags {
-		if _, exists := tagSet[v]; exists {
-			return nil, errors.New("タグが重複しています")
-		}
-		tagSet[v] = struct{}{}
-		tags = append(tags, v)
-	}
-	if len(tags) > 10 {
-		return nil, domain.ErrTagLimitExceeded
-	}
-	leaf, err := domain.NewLeaf(r.Note, r.URL, r.Platform, tags)
+	leaf, err := domain.NewLeaf(r.Note, r.URL, r.Platform, r.Tags)
 	if err != nil {
 		return nil, err
 	}
 	if r.Read {
 		_ = leaf.MarkAsRead()
 	}
-	// syncedAtはprivateなので反映できない。必要ならdomain.LeafにSetSyncedAtを追加すること。
 	return leaf, nil
 }
