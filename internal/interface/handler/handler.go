@@ -101,6 +101,18 @@ func (h *LeafHandler) UpdateLeaf(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "updated"})
 }
 
+// PATCH /api/leaves/:id/read
+func (h *LeafHandler) ReadLeaf(c *gin.Context) {
+	id := c.Param("id")
+
+	err := h.Usecase.ReadLeaf(c.Request.Context(), id)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"message": "marked as read"})
+}
+
 // DELETE /api/leaves/:id
 func (h *LeafHandler) DeleteLeaf(c *gin.Context) {
 	id := c.Param("id")

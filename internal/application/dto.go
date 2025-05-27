@@ -19,6 +19,7 @@ type LeafOutputDTO struct {
 	Title    string
 	URL      string
 	Platform string
+	Read     bool
 	Tags     []string
 	SyncedAt string
 }
@@ -37,6 +38,7 @@ func LeafDomainToOutputDTO(leaf *domain.Leaf) *LeafOutputDTO {
 		Title:    leaf.Title,
 		URL:      leaf.URL,
 		Platform: leaf.Platform,
+		Read:     leaf.Read,
 		Tags:     leaf.Tags,
 		SyncedAt: leaf.SyncedAt.Format(time.RFC3339),
 	}
