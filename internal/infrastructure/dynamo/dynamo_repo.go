@@ -63,63 +63,82 @@ func (r *LeafDynamoRepository) List(ctx context.Context, opts domain.ListOptions
 	if err != nil {
 		return nil, err
 	}
-	var leaves []domain.Leaf
-	if err := attributevalue.UnmarshalListOfMaps(queryOut.Items, &leaves); err != nil {
+	var record []LeafRecord
+	if err := attributevalue.UnmarshalListOfMaps(queryOut.Items, &record); err != nil {
 		return nil, err
+	}
+	var leaves []domain.Leaf
+	for _, r := range record {
+		leaf, err := RecordToLeaf(&r)
+		if err != nil {
+			return nil, err
+		}
+		leaves = append(leaves, *leaf)
 	}
 	return leaves, nil
 }
 
 func (r *LeafDynamoRepository) Put(ctx context.Context, leaf *domain.Leaf) (*domain.Leaf, error) {
-	item, err := attributevalue.MarshalMap(map[string]any{
-		"pk":        "USER#me",
-		"sk":        leaf.ID,
-		"id":        leaf.ID,
-		"note":      leaf.Note,
-		"url":       leaf.URL,
-		"platform":  leaf.Platform,
-		"tags":      leaf.Tags,
-		"read":      leaf.Read,
-		"synced_at": time.Now().UTC().Format(time.RFC3339),
-	})
+	item, err := attributevalue.MarshalMap(LeafToRecord(leaf))
 	if err != nil {
 		return nil, err
 	}
-	_, err = r.Client.PutItem(ctx, &dynamodb.PutItemInput{
+	putItem, err := r.Client.PutItem(ctx, &dynamodb.PutItemInput{
 		TableName: &r.TableName,
 		Item:      item,
 	})
 	if err != nil {
 		return nil, err
 	}
-	return leaf, nil
+	if putItem == nil {
+		return nil, errors.New("DBに保存できませんでした")
+	}
+	var record LeafRecord
+	if err := attributevalue.UnmarshalMap(putItem.Item, &record); err != nil {
+		return nil, err
+	}
+	new, err := RecordToLeaf(&record)
+	if err != nil {
+		return nil, err
+	}
+	return new, nil
 }
 
 func (r *LeafDynamoRepository) Update(ctx context.Context, update *domain.Leaf) error {
-	updateExpr := "SET #t = :note, #u = :url, #p = :platform, #tg = :tags, #r = :read"
-	_, err := r.Client.UpdateItem(ctx, &dynamodb.UpdateItemInput{
+	// UpdateItemで既存レコードのみ更新する
+	input := &dynamodb.UpdateItemInput{
 		TableName: &r.TableName,
 		Key: map[string]types.AttributeValue{
 			"pk": &types.AttributeValueMemberS{Value: "USER#me"},
-			"sk": &types.AttributeValueMemberS{Value: update.ID},
+			"sk": &types.AttributeValueMemberS{Value: update.ID().String()},
 		},
-		UpdateExpression: aws.String(updateExpr),
-		ExpressionAttributeNames: map[string]string{
-			"#t":  "note",
-			"#u":  "url",
-			"#p":  "platform",
-			"#tg": "tags",
-			"#r":  "read",
-		},
+		UpdateExpression: aws.String("SET note = :note, url = :url, platform = :platform, tags = :tags, read = :read, synced_at = :synced_at"),
 		ExpressionAttributeValues: map[string]types.AttributeValue{
-			":note":     &types.AttributeValueMemberS{Value: update.Note},
-			":url":      &types.AttributeValueMemberS{Value: update.URL},
-			":platform": &types.AttributeValueMemberS{Value: update.Platform},
-			":tags":     &types.AttributeValueMemberSS{Value: update.Tags},
-			":read":     &types.AttributeValueMemberBOOL{Value: update.Read},
+			":note":     &types.AttributeValueMemberS{Value: update.Note()},
+			":url":      &types.AttributeValueMemberS{Value: update.URL().String()},
+			":platform": &types.AttributeValueMemberS{Value: update.Platform()},
+			":tags": &types.AttributeValueMemberSS{Value: func() []string {
+				tags := update.Tags()
+				s := make([]string, len(tags))
+				for i, t := range tags {
+					s[i] = t.String()
+				}
+				return s
+			}()},
+			":read":      &types.AttributeValueMemberBOOL{Value: update.Read()},
+			":synced_at": &types.AttributeValueMemberS{Value: update.SyncedAt().Format(time.RFC3339)},
 		},
-	})
-	return err
+		ConditionExpression: aws.String("attribute_exists(pk) AND attribute_exists(sk)"),
+	}
+	_, err := r.Client.UpdateItem(ctx, input)
+	if err != nil {
+		var cce *types.ConditionalCheckFailedException
+		if errors.As(err, &cce) {
+			return errors.New("leaf not found")
+		}
+		return err
+	}
+	return nil
 }
 
 func (r *LeafDynamoRepository) Delete(ctx context.Context, id string) error {

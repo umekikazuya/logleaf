@@ -25,12 +25,19 @@ type LeafOutputDTO struct {
 }
 
 func LeafDomainToOutputDTO(leaf *domain.Leaf) *LeafOutputDTO {
+	// Convert []domain.Tag to []string
+	tags := leaf.Tags()
+	tagStrings := make([]string, len(tags))
+	for i, tag := range tags {
+		tagStrings[i] = tag.String()
+	}
+
 	return &LeafOutputDTO{
 		ID:       leaf.ID().String(),
 		Note:     leaf.Note(),
 		URL:      leaf.URL().String(),
 		Platform: leaf.Platform(),
-		Tags:     leaf.Tags(),
+		Tags:     tagStrings,
 		SyncedAt: leaf.SyncedAt().Format(time.RFC3339),
 	}
 }
