@@ -97,36 +97,15 @@ func (r *LeafDynamoRepository) Put(ctx context.Context, leaf *domain.Leaf) (*dom
 }
 
 func (r *LeafDynamoRepository) Update(ctx context.Context, update *domain.Leaf) error {
-	// タグを文字列スライスに変換
-	tags := update.Tags()
-	tagStrings := make([]string, len(tags))
-	for i, t := range tags {
-		tagStrings[i] = t.String()
-	}
-
-	input := &dynamodb.UpdateItemInput{
-		TableName: &r.TableName,
-		Key: map[string]types.AttributeValue{
-			"pk": &types.AttributeValueMemberS{Value: "USER#me"},
-			"sk": &types.AttributeValueMemberS{Value: update.ID().String()},
-		},
-		UpdateExpression: aws.String("SET note = :note, url = :url, platform = :platform, tags = :tags, read = :read, synced_at = :synced_at"),
-		ExpressionAttributeValues: map[string]types.AttributeValue{
-			":note":      &types.AttributeValueMemberS{Value: update.Note()},
-			":url":       &types.AttributeValueMemberS{Value: update.URL().String()},
-			":platform":  &types.AttributeValueMemberS{Value: update.Platform()},
-			":tags":      &types.AttributeValueMemberSS{Value: tagStrings},
-			":read":      &types.AttributeValueMemberBOOL{Value: update.Read()},
-			":synced_at": &types.AttributeValueMemberS{Value: update.SyncedAt().Format(time.RFC3339)},
-		},
-		ConditionExpression: aws.String("attribute_exists(pk) AND attribute_exists(sk)"),
-	}
-	_, err := r.Client.UpdateItem(ctx, input)
+	item, err := attributevalue.MarshalMap(LeafToRecord(update))
 	if err != nil {
-		var cce *types.ConditionalCheckFailedException
-		if errors.As(err, &cce) {
-			return errors.New("leaf not found")
-		}
+		return err
+	}
+	_, err = r.Client.PutItem(ctx, &dynamodb.PutItemInput{
+		TableName: &r.TableName,
+		Item:      item,
+	})
+	if err != nil {
 		return err
 	}
 	return nil
