@@ -29,7 +29,7 @@ func (u *LeafUsecase) GetLeaf(ctx context.Context, id string) (*domain.Leaf, err
 }
 
 func (u *LeafUsecase) AddLeaf(ctx context.Context, dto *LeafInputDTO) (*domain.Leaf, error) {
-	leaf, err := domain.NewLeaf(dto.Note, dto.URL, dto.Platform, dto.Tags)
+	leaf, err := domain.NewLeaf("", dto.Note, dto.URL, dto.Platform, dto.Tags)
 	if err != nil {
 		return nil, err
 	}
@@ -42,7 +42,13 @@ func (u *LeafUsecase) UpdateLeaf(ctx context.Context, update *LeafInputDTO) erro
 	if err != nil {
 		return err
 	}
+	if leaf == nil {
+		return errors.New("更新対象のLeafが見つかりません")
+	}
 	// Noteの更新
+	if err := leaf.UpdateNote(update.Note); err != nil {
+		return err
+	}
 	if err := leaf.UpdateNote(update.Note); err != nil {
 		return err
 	}

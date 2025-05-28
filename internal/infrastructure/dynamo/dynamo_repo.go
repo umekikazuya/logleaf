@@ -63,12 +63,12 @@ func (r *LeafDynamoRepository) List(ctx context.Context, opts domain.ListOptions
 	if err != nil {
 		return nil, err
 	}
-	var record []LeafRecord
-	if err := attributevalue.UnmarshalListOfMaps(queryOut.Items, &record); err != nil {
+	var records []LeafRecord
+	if err := attributevalue.UnmarshalListOfMaps(queryOut.Items, &records); err != nil {
 		return nil, err
 	}
 	var leaves []domain.Leaf
-	for _, r := range record {
+	for _, r := range records {
 		leaf, err := RecordToLeaf(&r)
 		if err != nil {
 			return nil, err
@@ -84,9 +84,9 @@ func (r *LeafDynamoRepository) Put(ctx context.Context, leaf *domain.Leaf) (*dom
 		return nil, err
 	}
 	putItem, err := r.Client.PutItem(ctx, &dynamodb.PutItemInput{
-		TableName:    &r.TableName,
-		Item:         item,
-		ReturnValues: types.ReturnValueAllNew,
+		TableName: &r.TableName,
+		Item:      item,
+		// ReturnValues: types.ReturnValueAllNew,
 	})
 	if err != nil {
 		return nil, err
@@ -94,19 +94,25 @@ func (r *LeafDynamoRepository) Put(ctx context.Context, leaf *domain.Leaf) (*dom
 	if putItem == nil {
 		return nil, errors.New("DBに保存できませんでした")
 	}
-	var record LeafRecord
-	if err := attributevalue.UnmarshalMap(putItem.Item, &record); err != nil {
-		return nil, err
-	}
-	new, err := RecordToLeaf(&record)
-	if err != nil {
-		return nil, err
-	}
-	return new, nil
+	return leaf, nil
+	// var record LeafRecord
+	// if err := attributevalue.UnmarshalMap(putItem.Item, &record); err != nil {
+	// }
+	// savedLeaf, err := RecordToLeaf(&record)
+	// if err != nil {
+	// 	return nil, err
+	// }
+	// return savedLeaf, nil
 }
 
 func (r *LeafDynamoRepository) Update(ctx context.Context, update *domain.Leaf) error {
-	// UpdateItemで既存レコードのみ更新する
+	// タグを文字列スライスに変換
+	tags := update.Tags()
+	tagStrings := make([]string, len(tags))
+	for i, t := range tags {
+		tagStrings[i] = t.String()
+	}
+
 	input := &dynamodb.UpdateItemInput{
 		TableName: &r.TableName,
 		Key: map[string]types.AttributeValue{
@@ -115,17 +121,10 @@ func (r *LeafDynamoRepository) Update(ctx context.Context, update *domain.Leaf) 
 		},
 		UpdateExpression: aws.String("SET note = :note, url = :url, platform = :platform, tags = :tags, read = :read, synced_at = :synced_at"),
 		ExpressionAttributeValues: map[string]types.AttributeValue{
-			":note":     &types.AttributeValueMemberS{Value: update.Note()},
-			":url":      &types.AttributeValueMemberS{Value: update.URL().String()},
-			":platform": &types.AttributeValueMemberS{Value: update.Platform()},
-			":tags": &types.AttributeValueMemberSS{Value: func() []string {
-				tags := update.Tags()
-				s := make([]string, len(tags))
-				for i, t := range tags {
-					s[i] = t.String()
-				}
-				return s
-			}()},
+			":note":      &types.AttributeValueMemberS{Value: update.Note()},
+			":url":       &types.AttributeValueMemberS{Value: update.URL().String()},
+			":platform":  &types.AttributeValueMemberS{Value: update.Platform()},
+			":tags":      &types.AttributeValueMemberSS{Value: tagStrings},
 			":read":      &types.AttributeValueMemberBOOL{Value: update.Read()},
 			":synced_at": &types.AttributeValueMemberS{Value: update.SyncedAt().Format(time.RFC3339)},
 		},
@@ -195,7 +194,7 @@ func LeafToRecord(l *domain.Leaf) *LeafRecord {
 
 // RecordをEntityに変換
 func RecordToLeaf(r *LeafRecord) (*domain.Leaf, error) {
-	leaf, err := domain.NewLeaf(r.Note, r.URL, r.Platform, r.Tags)
+	leaf, err := domain.NewLeaf(r.ID, r.Note, r.URL, r.Platform, r.Tags)
 	if err != nil {
 		return nil, err
 	}

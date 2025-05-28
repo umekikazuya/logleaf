@@ -2,6 +2,7 @@ package domain
 
 import (
 	"errors"
+	"fmt"
 	"net/url"
 	"strconv"
 	"time"
@@ -60,7 +61,7 @@ func NewLeafURL(value string) (LeafURL, error) {
 	}
 	// URL形式の検証
 	if _, err := url.ParseRequestURI(value); err != nil {
-		return LeafURL{}, errors.New("URLの形式が無効です " + err.Error())
+		return LeafURL{}, fmt.Errorf("URLの形式が無効です: %w", err)
 	}
 	return LeafURL{value: value}, nil
 }
@@ -120,14 +121,21 @@ func (l *Leaf) SyncedAt() time.Time { return l.syncedAt }
 // ファクトリ
 // ID生成
 // バリデーション一括
-func NewLeaf(note string, url string, platform string, tagValues []string) (*Leaf, error) {
+func NewLeaf(id string, note string, url string, platform string, tagValues []string) (*Leaf, error) {
 	if note == "" {
 		return nil, errors.New("Noteは空にできません")
 	}
 	if platform == "" {
 		return nil, errors.New("Platformは空にできません")
 	}
-	id := NewLeafIDFromUUID()
+	// IDが空の場合は新規生成
+	if id == "" {
+		id = NewLeafIDFromUUID().String()
+	}
+	leafID, err := NewLeafID(id)
+	if err != nil {
+		return nil, err
+	}
 	leafURL, err := NewLeafURL(url)
 	if err != nil {
 		return nil, err
@@ -149,13 +157,56 @@ func NewLeaf(note string, url string, platform string, tagValues []string) (*Lea
 		return nil, ErrTagLimitExceeded
 	}
 	return &Leaf{
-		id:       id,
+		id:       leafID,
 		note:     note,
 		url:      leafURL,
 		platform: platform,
 		tags:     tags,
 		read:     false,
 		syncedAt: time.Now().UTC(),
+	}, nil
+}
+
+// 既存のLeafを再構築するためのファクトリ
+func ReconstructLeaf(id string, note string, url string, platform string, tagValues []string, read bool, syncedAt time.Time) (*Leaf, error) {
+	leafID, err := NewLeafID(id)
+	if err != nil {
+		return nil, err
+	}
+	if note == "" {
+		return nil, errors.New("Noteは空にできません")
+	}
+	if platform == "" {
+		return nil, errors.New("Platformは空にできません")
+	}
+	leafURL, err := NewLeafURL(url)
+	if err != nil {
+		return nil, err
+	}
+	tags := make([]Tag, 0, len(tagValues))
+	tagSet := make(map[string]struct{})
+	for _, v := range tagValues {
+		t, err := NewTag(v)
+		if err != nil {
+			return nil, err
+		}
+		if _, exists := tagSet[t.value]; exists {
+			return nil, errors.New("タグが重複しています")
+		}
+		tagSet[t.value] = struct{}{}
+		tags = append(tags, t)
+	}
+	if len(tags) > MaxTagsPerLeaf {
+		return nil, ErrTagLimitExceeded
+	}
+	return &Leaf{
+		id:       leafID,
+		note:     note,
+		url:      leafURL,
+		platform: platform,
+		tags:     tags,
+		read:     read,
+		syncedAt: syncedAt,
 	}, nil
 }
 
