@@ -2,7 +2,7 @@ package handler
 
 type CreateLeafRequest struct {
 	Note     string   `json:"note" binding:"required"`
-	URL      string   `json:"url" binding:"required" uri:"url"`
+	URL      string   `json:"url" binding:"required"`
 	Platform string   `json:"platform"`
 	Tags     []string `json:"tags"`
 }

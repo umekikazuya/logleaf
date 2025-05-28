@@ -86,7 +86,6 @@ func (r *LeafDynamoRepository) Put(ctx context.Context, leaf *domain.Leaf) (*dom
 	putItem, err := r.Client.PutItem(ctx, &dynamodb.PutItemInput{
 		TableName: &r.TableName,
 		Item:      item,
-		// ReturnValues: types.ReturnValueAllNew,
 	})
 	if err != nil {
 		return nil, err
@@ -95,14 +94,6 @@ func (r *LeafDynamoRepository) Put(ctx context.Context, leaf *domain.Leaf) (*dom
 		return nil, errors.New("DBに保存できませんでした")
 	}
 	return leaf, nil
-	// var record LeafRecord
-	// if err := attributevalue.UnmarshalMap(putItem.Item, &record); err != nil {
-	// }
-	// savedLeaf, err := RecordToLeaf(&record)
-	// if err != nil {
-	// 	return nil, err
-	// }
-	// return savedLeaf, nil
 }
 
 func (r *LeafDynamoRepository) Update(ctx context.Context, update *domain.Leaf) error {
@@ -194,12 +185,13 @@ func LeafToRecord(l *domain.Leaf) *LeafRecord {
 
 // RecordをEntityに変換
 func RecordToLeaf(r *LeafRecord) (*domain.Leaf, error) {
-	leaf, err := domain.NewLeaf(r.ID, r.Note, r.URL, r.Platform, r.Tags)
+	syncedAt, err := time.Parse(time.RFC3339, r.SyncedAt)
 	if err != nil {
 		return nil, err
 	}
-	if r.Read {
-		_ = leaf.MarkAsRead()
+	leaf, err := domain.ReconstructLeaf(r.ID, r.Note, r.URL, r.Platform, r.Tags, r.Read, syncedAt)
+	if err != nil {
+		return nil, err
 	}
 	return leaf, nil
 }

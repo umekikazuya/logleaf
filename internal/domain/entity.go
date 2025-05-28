@@ -60,7 +60,7 @@ func NewLeafURL(value string) (LeafURL, error) {
 		return LeafURL{}, errors.New("URLは3文字以上2048文字以下である必要があります")
 	}
 	// URL形式の検証
-	if _, err := url.ParseRequestURI(value); err != nil {
+	if _, err := url.Parse(value); err != nil {
 		return LeafURL{}, fmt.Errorf("URLの形式が無効です: %w", err)
 	}
 	return LeafURL{value: value}, nil
@@ -121,7 +121,7 @@ func (l *Leaf) SyncedAt() time.Time { return l.syncedAt }
 // ファクトリ
 // ID生成
 // バリデーション一括
-func NewLeaf(id string, note string, url string, platform string, tagValues []string) (*Leaf, error) {
+func NewLeaf(note string, url string, platform string, tagValues []string, read bool) (*Leaf, error) {
 	if note == "" {
 		return nil, errors.New("Noteは空にできません")
 	}
@@ -129,13 +129,7 @@ func NewLeaf(id string, note string, url string, platform string, tagValues []st
 		return nil, errors.New("Platformは空にできません")
 	}
 	// IDが空の場合は新規生成
-	if id == "" {
-		id = NewLeafIDFromUUID().String()
-	}
-	leafID, err := NewLeafID(id)
-	if err != nil {
-		return nil, err
-	}
+	id := NewLeafIDFromUUID()
 	leafURL, err := NewLeafURL(url)
 	if err != nil {
 		return nil, err
@@ -157,7 +151,7 @@ func NewLeaf(id string, note string, url string, platform string, tagValues []st
 		return nil, ErrTagLimitExceeded
 	}
 	return &Leaf{
-		id:       leafID,
+		id:       id,
 		note:     note,
 		url:      leafURL,
 		platform: platform,

@@ -54,6 +54,7 @@ func (h *LeafHandler) AddLeaf(c *gin.Context) {
 	// Request
 	var req CreateLeafRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request body"})
 		return
 	}
 	// Convert to Dto
