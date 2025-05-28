@@ -38,11 +38,11 @@ func (r *LeafDynamoRepository) Get(ctx context.Context, id string) (*domain.Leaf
 	if output.Item == nil {
 		return nil, errors.New("leaf not found")
 	}
-	var leaf domain.Leaf
-	if err := attributevalue.UnmarshalMap(output.Item, &leaf); err != nil {
+	var record LeafRecord
+	if err := attributevalue.UnmarshalMap(output.Item, &record); err != nil {
 		return nil, err
 	}
-	return &leaf, nil
+	return RecordToLeaf(&record)
 }
 
 func (r *LeafDynamoRepository) List(ctx context.Context, opts domain.ListOptions) ([]domain.Leaf, error) {
@@ -63,63 +63,52 @@ func (r *LeafDynamoRepository) List(ctx context.Context, opts domain.ListOptions
 	if err != nil {
 		return nil, err
 	}
-	var leaves []domain.Leaf
-	if err := attributevalue.UnmarshalListOfMaps(queryOut.Items, &leaves); err != nil {
+	var records []LeafRecord
+	if err := attributevalue.UnmarshalListOfMaps(queryOut.Items, &records); err != nil {
 		return nil, err
+	}
+	var leaves []domain.Leaf
+	for _, r := range records {
+		leaf, err := RecordToLeaf(&r)
+		if err != nil {
+			return nil, err
+		}
+		leaves = append(leaves, *leaf)
 	}
 	return leaves, nil
 }
 
 func (r *LeafDynamoRepository) Put(ctx context.Context, leaf *domain.Leaf) (*domain.Leaf, error) {
-	item, err := attributevalue.MarshalMap(map[string]any{
-		"pk":        "USER#me",
-		"sk":        leaf.ID,
-		"id":        leaf.ID,
-		"title":     leaf.Title,
-		"url":       leaf.URL,
-		"platform":  leaf.Platform,
-		"tags":      leaf.Tags,
-		"read":      leaf.Read,
-		"synced_at": time.Now().UTC().Format(time.RFC3339),
-	})
+	item, err := attributevalue.MarshalMap(LeafToRecord(leaf))
 	if err != nil {
 		return nil, err
 	}
-	_, err = r.Client.PutItem(ctx, &dynamodb.PutItemInput{
+	putItem, err := r.Client.PutItem(ctx, &dynamodb.PutItemInput{
 		TableName: &r.TableName,
 		Item:      item,
 	})
 	if err != nil {
 		return nil, err
 	}
+	if putItem == nil {
+		return nil, errors.New("DBに保存できませんでした")
+	}
 	return leaf, nil
 }
 
 func (r *LeafDynamoRepository) Update(ctx context.Context, update *domain.Leaf) error {
-	updateExpr := "SET #t = :title, #u = :url, #p = :platform, #tg = :tags, #r = :read"
-	_, err := r.Client.UpdateItem(ctx, &dynamodb.UpdateItemInput{
+	item, err := attributevalue.MarshalMap(LeafToRecord(update))
+	if err != nil {
+		return err
+	}
+	_, err = r.Client.PutItem(ctx, &dynamodb.PutItemInput{
 		TableName: &r.TableName,
-		Key: map[string]types.AttributeValue{
-			"pk": &types.AttributeValueMemberS{Value: "USER#me"},
-			"sk": &types.AttributeValueMemberS{Value: update.ID},
-		},
-		UpdateExpression: aws.String(updateExpr),
-		ExpressionAttributeNames: map[string]string{
-			"#t":  "title",
-			"#u":  "url",
-			"#p":  "platform",
-			"#tg": "tags",
-			"#r":  "read",
-		},
-		ExpressionAttributeValues: map[string]types.AttributeValue{
-			":title":    &types.AttributeValueMemberS{Value: update.Title},
-			":url":      &types.AttributeValueMemberS{Value: update.URL},
-			":platform": &types.AttributeValueMemberS{Value: update.Platform},
-			":tags":     &types.AttributeValueMemberSS{Value: update.Tags},
-			":read":     &types.AttributeValueMemberBOOL{Value: update.Read},
-		},
+		Item:      item,
 	})
-	return err
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 func (r *LeafDynamoRepository) Delete(ctx context.Context, id string) error {
@@ -138,4 +127,50 @@ func (r *LeafDynamoRepository) Delete(ctx context.Context, id string) error {
 		return errors.New("leaf not found")
 	}
 	return nil
+}
+
+// DynamoDB永続化用レコード
+
+type LeafRecord struct {
+	PK       string   `dynamodbav:"pk"`
+	SK       string   `dynamodbav:"sk"`
+	ID       string   `dynamodbav:"id"`
+	Note     string   `dynamodbav:"note"`
+	URL      string   `dynamodbav:"url"`
+	Platform string   `dynamodbav:"platform"`
+	Tags     []string `dynamodbav:"tags"`
+	Read     bool     `dynamodbav:"read"`
+	SyncedAt string   `dynamodbav:"synced_at"`
+}
+
+// EntityをRecordに変換
+func LeafToRecord(l *domain.Leaf) *LeafRecord {
+	tags := make([]string, len(l.Tags()))
+	for i, t := range l.Tags() {
+		tags[i] = t.String()
+	}
+	return &LeafRecord{
+		PK:       "USER#me",
+		SK:       l.ID().String(),
+		ID:       l.ID().String(),
+		Note:     l.Note(),
+		URL:      l.URL().String(),
+		Platform: l.Platform(),
+		Tags:     tags,
+		Read:     l.Read(),
+		SyncedAt: l.SyncedAt().Format(time.RFC3339),
+	}
+}
+
+// RecordをEntityに変換
+func RecordToLeaf(r *LeafRecord) (*domain.Leaf, error) {
+	syncedAt, err := time.Parse(time.RFC3339, r.SyncedAt)
+	if err != nil {
+		return nil, err
+	}
+	leaf, err := domain.ReconstructLeaf(r.ID, r.Note, r.URL, r.Platform, r.Tags, r.Read, syncedAt)
+	if err != nil {
+		return nil, err
+	}
+	return leaf, nil
 }

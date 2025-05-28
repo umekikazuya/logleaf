@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 
-	"github.com/google/uuid"
 	"github.com/umekikazuya/logleaf/internal/domain"
 )
 
@@ -30,27 +29,41 @@ func (u *LeafUsecase) GetLeaf(ctx context.Context, id string) (*domain.Leaf, err
 }
 
 func (u *LeafUsecase) AddLeaf(ctx context.Context, dto *LeafInputDTO) (*domain.Leaf, error) {
-	leaf := domain.NewLeaf(
-		uuid.NewString(),
-		dto.Title,
-		dto.URL,
-		dto.Platform,
-	)
-	if dto.Tags != nil {
-		leaf.UpdateTags(dto.Tags)
+	leaf, err := domain.NewLeaf(dto.Note, dto.URL, dto.Platform, dto.Tags, false)
+	if err != nil {
+		return nil, err
 	}
 	return u.repo.Put(ctx, leaf)
 }
 
 func (u *LeafUsecase) UpdateLeaf(ctx context.Context, update *LeafInputDTO) error {
-	leaf := domain.NewLeaf(
-		update.ID,
-		update.Title,
-		update.URL,
-		update.Platform,
-	)
-	if update.Tags != nil {
-		leaf.UpdateTags(update.Tags)
+	// 既存Leaf取得
+	leaf, err := u.repo.Get(ctx, update.ID)
+	if err != nil {
+		return err
+	}
+	if leaf == nil {
+		return errors.New("更新対象のLeafが見つかりません")
+	}
+	// Noteの更新
+	if err := leaf.UpdateNote(update.Note); err != nil {
+		return err
+	}
+	// Platformの更新
+	if err := leaf.UpdatePlatform(update.Platform); err != nil {
+		return err
+	}
+	// タグ変換
+	tags := make([]domain.Tag, 0, len(update.Tags))
+	for _, v := range update.Tags {
+		t, err := domain.NewTag(v)
+		if err != nil {
+			return err
+		}
+		tags = append(tags, t)
+	}
+	if err := leaf.UpdateTags(tags); err != nil {
+		return err
 	}
 	return u.repo.Update(ctx, leaf)
 }
