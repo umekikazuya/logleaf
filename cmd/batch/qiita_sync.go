@@ -27,7 +27,7 @@ func main() {
 	}
 	qiitaClient := qiita.NewQiitaClient(token, user)
 	items, err := qiitaClient.FetchStocksAll(
-		context.Background(),
+		ctx,
 	)
 	if err != nil {
 		fmt.Println("Qiita API取得エラー:", err)
@@ -41,7 +41,6 @@ func main() {
 		panic(err)
 	}
 	repo := dynamo.NewLeafDynamoRepository(dynamoClient, tableName)
-	ctx = context.Background()
 
 	// 既存LeafのURL一覧を取得して差分同期
 	leaves, err := repo.List(ctx, domain.ListOptions{Limit: 1000})
