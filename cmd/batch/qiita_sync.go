@@ -56,12 +56,28 @@ func main() {
 	}
 	repo := dynamo.NewLeafDynamoRepository(dynamoClient, os.Getenv("DYNAMO_TABLE"))
 	ctx := context.Background()
+
+	// 既存LeafのURL一覧を取得して差分同期
+	leaves, err := repo.List(ctx, domain.ListOptions{Limit: 1000})
+	if err != nil {
+		fmt.Println("DynamoDB取得エラー:", err)
+		os.Exit(1)
+	}
+	existingURLs := make(map[string]struct{})
+	for _, leaf := range leaves {
+		existingURLs[leaf.URL().String()] = struct{}{}
+	}
+
+	countNew := 0
 	for _, item := range items {
+		if _, exists := existingURLs[item.URL]; exists {
+			continue // 既存記事はスキップ
+		}
 		tags := make([]string, len(item.Tags))
 		for i, t := range item.Tags {
 			tags[i] = t.Name
 		}
-		leaf, err := domain.NewLeaf(item.Title, item.URL, "qiita", []string{}, false)
+		leaf, err := domain.NewLeaf(item.Title, item.URL, "qiita", tags, false)
 		if err != nil {
 			fmt.Println("Leaf生成エラー:", err)
 			continue
@@ -70,7 +86,8 @@ func main() {
 		if err != nil {
 			fmt.Println("DynamoDB保存エラー:", err)
 		}
+		countNew++
 		time.Sleep(200 * time.Millisecond) // API制限対策
 	}
-	fmt.Println("Qiitaストック記事の同期が完了しました")
+	fmt.Printf("Qiitaストック記事の同期が完了しました（新規追加: %d件）\n", countNew)
 }

@@ -30,12 +30,17 @@ func NewQiitaClient(token, userID string) *QiitaClient {
 
 // FetchStocks fetches stock articles from Qiita API
 func (c *QiitaClient) FetchStocks() ([]QiitaItem, error) {
+	// パラメータをつけたい。per_page=100&page=1
 	url := fmt.Sprintf("https://qiita.com/api/v2/users/%s/stocks", c.UserID)
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
 		return nil, err
 	}
 	req.Header.Set("Authorization", "Bearer "+c.Token)
+	q := req.URL.Query()
+	q.Set("per_page", "100")
+	q.Set("page", "1")
+	req.URL.RawQuery = q.Encode()
 	client := &http.Client{}
 	resp, err := client.Do(req)
 	if err != nil {
