@@ -15,9 +15,10 @@ import (
 )
 
 func main() {
+	ctx := context.Background()
 	err := godotenv.Load()
 	if err != nil {
-		panic("Error loading .env file")
+		fmt.Println("Error loading .env file")
 	}
 	token := os.Getenv("QIITA_TOKEN")
 	user := os.Getenv("QIITA_USER")
@@ -27,7 +28,9 @@ func main() {
 		os.Exit(1)
 	}
 	client := qiita.NewQiitaClient(token, user)
-	items, err := client.FetchStocks()
+	items, err := client.FetchStocksAll(
+		context.Background(),
+	)
 	if err != nil {
 		fmt.Println("Qiita API取得エラー:", err)
 		os.Exit(1)
@@ -54,8 +57,7 @@ func main() {
 	if tableName == "" {
 		panic("DYNAMO_TABLE environment variable is required")
 	}
-	repo := dynamo.NewLeafDynamoRepository(dynamoClient, os.Getenv("DYNAMO_TABLE"))
-	ctx := context.Background()
+	repo := dynamo.NewLeafDynamoRepository(dynamoClient, tableName)
 
 	// 既存LeafのURL一覧を取得して差分同期
 	leaves, err := repo.List(ctx, domain.ListOptions{Limit: 1000})
@@ -67,17 +69,20 @@ func main() {
 	for _, leaf := range leaves {
 		existingURLs[leaf.URL().String()] = struct{}{}
 	}
+	fmt.Println(existingURLs)
 
 	countNew := 0
 	for _, item := range items {
 		if _, exists := existingURLs[item.URL]; exists {
-			continue // 既存記事はスキップ
+			continue
 		}
 		tags := make([]string, len(item.Tags))
 		for i, t := range item.Tags {
 			tags[i] = t.Name
 		}
-		leaf, err := domain.NewLeaf(item.Title, item.URL, "qiita", tags, false)
+		leaf, err := domain.NewLeaf(
+			item.Title, item.URL, "qiita", tags, false,
+		)
 		if err != nil {
 			fmt.Println("Leaf生成エラー:", err)
 			continue
@@ -87,7 +92,7 @@ func main() {
 			fmt.Println("DynamoDB保存エラー:", err)
 		}
 		countNew++
-		time.Sleep(200 * time.Millisecond) // API制限対策
+		time.Sleep(1 * time.Second) // API制限対策
 	}
 	fmt.Printf("Qiitaストック記事の同期が完了しました（新規追加: %d件）\n", countNew)
 }
