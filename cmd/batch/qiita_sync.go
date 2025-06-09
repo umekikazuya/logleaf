@@ -6,8 +6,6 @@ import (
 	"os"
 	"time"
 
-	"github.com/aws/aws-sdk-go-v2/config"
-	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
 	"github.com/joho/godotenv"
 	"github.com/umekikazuya/logleaf/internal/domain"
 	"github.com/umekikazuya/logleaf/internal/infrastructure/dynamo"
@@ -27,8 +25,8 @@ func main() {
 		fmt.Println("QIITA_TOKENとQIITA_USERを環境変数で指定してください")
 		os.Exit(1)
 	}
-	client := qiita.NewQiitaClient(token, user)
-	items, err := client.FetchStocksAll(
+	qiitaClient := qiita.NewQiitaClient(token, user)
+	items, err := qiitaClient.FetchStocksAll(
 		context.Background(),
 	)
 	if err != nil {
@@ -36,28 +34,14 @@ func main() {
 		os.Exit(1)
 	}
 
-	// DynamoDB設定
-	endpoint := os.Getenv("DYNAMO_ENDPOINT")
-	region := os.Getenv("AWS_REGION")
-	if region == "" {
-		region = "ap-northeast-1"
-	}
-	cfg, err := config.LoadDefaultConfig(context.Background(),
-		config.WithRegion(region),
-	)
+	_ = godotenv.Load() // 本番は.env不要なのでエラー無視
+
+	dynamoClient, tableName, err := dynamo.NewDynamoClientAndTable(ctx)
 	if err != nil {
-		panic("Failed to load AWS config: " + err.Error())
-	}
-	dynamoClient := dynamodb.NewFromConfig(cfg, func(o *dynamodb.Options) {
-		if endpoint != "" {
-			o.BaseEndpoint = &endpoint
-		}
-	})
-	tableName := os.Getenv("DYNAMO_TABLE")
-	if tableName == "" {
-		panic("DYNAMO_TABLE environment variable is required")
+		panic(err)
 	}
 	repo := dynamo.NewLeafDynamoRepository(dynamoClient, tableName)
+	ctx = context.Background()
 
 	// 既存LeafのURL一覧を取得して差分同期
 	leaves, err := repo.List(ctx, domain.ListOptions{Limit: 1000})
@@ -69,20 +53,17 @@ func main() {
 	for _, leaf := range leaves {
 		existingURLs[leaf.URL().String()] = struct{}{}
 	}
-	fmt.Println(existingURLs)
 
 	countNew := 0
 	for _, item := range items {
 		if _, exists := existingURLs[item.URL]; exists {
-			continue
+			continue // 既存記事はスキップ
 		}
 		tags := make([]string, len(item.Tags))
 		for i, t := range item.Tags {
 			tags[i] = t.Name
 		}
-		leaf, err := domain.NewLeaf(
-			item.Title, item.URL, "qiita", tags, false,
-		)
+		leaf, err := domain.NewLeaf(item.Title, item.URL, "qiita", tags, false)
 		if err != nil {
 			fmt.Println("Leaf生成エラー:", err)
 			continue
@@ -92,7 +73,7 @@ func main() {
 			fmt.Println("DynamoDB保存エラー:", err)
 		}
 		countNew++
-		time.Sleep(1 * time.Second) // API制限対策
+		time.Sleep(200 * time.Millisecond) // API制限対策
 	}
 	fmt.Printf("Qiitaストック記事の同期が完了しました（新規追加: %d件）\n", countNew)
 }
