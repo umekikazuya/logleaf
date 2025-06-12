@@ -9,8 +9,7 @@ RUN CGO_ENABLED=0 GOOS=linux go build -o logleaf-server ./cmd/server/main.go
 FROM alpine:3.19
 WORKDIR /app
 COPY --from=builder /app/logleaf-server ./
+COPY .env .env
 EXPOSE 8080
-EXPOSE 8082
-EXPOSE 8082
 ENV GIN_MODE=release
 CMD ["./logleaf-server"]
