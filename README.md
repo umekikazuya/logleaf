@@ -35,7 +35,7 @@ aws dynamodb create-table \
 ### 1. Qiitaのアクセストークンを取得
 
 Qiitaのアカウントからアクセストークンを生成します。
-参考: https://qiita.com/maiamea/items/680cca06f7825595cba0
+参考: 参考: [Qiita記事 (APIトークン取得手順)](https://qiita.com/maiamea/items/680cca06f7825595cba0)
 
 ### 2. 環境変数に設定
 

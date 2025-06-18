@@ -1,11 +1,14 @@
 steps:
-  - name: 'gcr.io/cloud-builders/docker'
+  - id: docker-build
+    name: 'gcr.io/cloud-builders/docker'
     args: ['build', '-t', '${_IMAGE}', '.']
 
-  - name: 'gcr.io/cloud-builders/docker'
+  - id: docker-push
+    name: 'gcr.io/cloud-builders/docker'
     args: ['push', '${_IMAGE}']
 
-  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+  - id: deploy
+    name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
     entrypoint: gcloud
     args:
       - run
@@ -15,7 +18,7 @@ steps:
       - --region=asia-northeast1
       - --platform=managed
       - --allow-unauthenticated
-      - --project=momenture
+      - --project=${PROJECT_ID}
 
 images:
   - '${_IMAGE}'
