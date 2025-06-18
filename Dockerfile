@@ -10,7 +10,5 @@ FROM alpine:3.19
 WORKDIR /app
 COPY --from=builder /app/logleaf-server ./
 EXPOSE 8080
-EXPOSE 8082
-EXPOSE 8082
 ENV GIN_MODE=release
 CMD ["./logleaf-server"]

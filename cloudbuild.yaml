@@ -1,0 +1,30 @@
+steps:
+  - id: docker-build
+    name: 'gcr.io/cloud-builders/docker'
+    args: ['build', '-t', '${_IMAGE}', '.']
+
+  - id: docker-push
+    name: 'gcr.io/cloud-builders/docker'
+    args: ['push', '${_IMAGE}']
+
+  - id: deploy
+    name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    entrypoint: gcloud
+    args:
+      - run
+      - deploy
+      - logleaf-api
+      - --image=${_IMAGE}
+      - --region=asia-northeast1
+      - --platform=managed
+      - --allow-unauthenticated
+      - --project=${PROJECT_ID}
+
+images:
+  - '${_IMAGE}'
+
+substitutions:
+  _IMAGE: 'asia-northeast1-docker.pkg.dev/$PROJECT_ID/logleaf-api-repo/logleaf-api:latest'
+
+options:
+  logging: CLOUD_LOGGING_ONLY
