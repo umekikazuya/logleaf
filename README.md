@@ -1,17 +1,22 @@
 # Logleaf
 
 ## 環境構築
+
 ### 1. git clone
+
 ```bash
 git clone https://github.com/umekikazuya/logleaf.git
 cd logleaf
 ```
+
 ### 2. Dockerイメージのビルド & コンテナの起動
+
 ```bash
 docker-compose up --build
 ```
 
 ### 3. DynamoDB初期セットアップ
+
 ```bash
 aws dynamodb create-table \
   --table-name leaves \
@@ -26,11 +31,14 @@ aws dynamodb create-table \
 ```
 
 ## Qiita APIトークンの設定
+
 ### 1. Qiitaのアクセストークンを取得
+
 Qiitaのアカウントからアクセストークンを生成します。
 参考: https://qiita.com/maiamea/items/680cca06f7825595cba0
 
 ### 2. 環境変数に設定
+
 `.env.example`をコピーして`.env`ファイルを作成し、アクセストークンを設定します。
 
 ```bash
@@ -44,4 +52,3 @@ QIITA_ACCESS_TOKEN=your_qiita_access_token
 ```
 
 ## API仕様
-

@@ -21,7 +21,7 @@ images:
   - '${_IMAGE}'
 
 substitutions:
-  _IMAGE: 'gcr.io/$PROJECT_ID/logleaf-api:latest'
+  _IMAGE: 'asia-northeast1-docker.pkg.dev/$PROJECT_ID/logleaf-api-repo/logleaf-api:latest'
 
 options:
   logging: CLOUD_LOGGING_ONLY
